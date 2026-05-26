@@ -85,6 +85,64 @@ encrypts them by default on Linux.
 
 Press `Ctrl+F4` or `Alt+F4` on a keyboard attached to the Pi.
 
+## Optional: remote access via Tailscale (`install-tailscale.sh`)
+
+If you want to manage the Pi remotely (SSH from anywhere without
+opening ports, no key management headaches), run `install-tailscale.sh`
+after the kiosk is set up. It installs Tailscale, joins your tailnet
+with **Tailscale SSH** enabled, and prints the IP / MagicDNS name
+you can SSH to.
+
+### One-time prep (in your Tailscale admin console)
+
+1. Go to <https://login.tailscale.com/admin/settings/keys>.
+2. Click **Generate auth key**.
+   - **Reusable**: optional.
+   - **Ephemeral**: leave OFF (you want the Pi to persist across reboots).
+   - **Pre-approved**: ON if your tailnet requires device approval.
+   - **Tags**: optional (e.g. `tag:kiosk`).
+3. Copy the key. It starts with `tskey-auth-`.
+
+### On the Pi
+
+```bash
+chmod +x install-tailscale.sh
+./install-tailscale.sh
+```
+
+When prompted:
+- Confirm the tailnet hostname (defaults to the Pi's current
+  hostname).
+- Paste the pre-auth key. Input is hidden — nothing echoes.
+
+When the script finishes it prints the Tailscale IPv4 and the
+MagicDNS hostname.
+
+### SSH in from anywhere
+
+From any other device on your tailnet:
+
+```bash
+ssh <pi-user>@<hostname>      # e.g. ssh pi@amweb-pi
+ssh <pi-user>@<tailscale-ip>  # e.g. ssh pi@100.x.y.z
+```
+
+No password, no SSH key setup on the Pi — Tailscale SSH handles
+authentication against your tailnet identity and ACLs.
+
+### Notes / caveats
+
+- The pre-auth key is a secret. The script never echoes it, never
+  logs it, and `unset`s it from the shell as soon as `tailscale up`
+  returns. It is **not** stored on disk.
+- Tailscale SSH requires that your tailnet ACLs permit SSH from
+  your source identity to this device. The default Tailscale ACL
+  allows it; if you've customised ACLs, make sure SSH is allowed.
+- The classic OpenSSH server on the Pi is independent of this. If
+  you want it too, enable it with `sudo systemctl enable --now ssh`.
+- To remove Tailscale later: `sudo tailscale logout && sudo apt
+  remove tailscale`.
+
 ## Updating the URL later
 
 Edit the line that begins `AMWEB_URL=` in `~/amweb-kiosk.sh`:
